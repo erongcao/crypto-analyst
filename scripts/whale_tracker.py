@@ -12,6 +12,23 @@ from datetime import datetime
 from statistics import mean
 
 BASE_URL = "https://data-api.binance.vision"
+BINANCE_ENDPOINTS = [
+    "https://data-api.binance.vision",
+    "https://api.binance.us",
+]
+
+def fetch_with_fallback(path):
+    for base in BINANCE_ENDPOINTS:
+        try:
+            from urllib import request, error
+            url = base + path
+            with request.urlopen(url, timeout=10) as response:
+                import json
+                return json.loads(response.read().decode())
+        except Exception:
+            continue
+    print(f"所有 Binance 节点均无法访问", file=sys.stderr)
+    sys.exit(1)
 
 def fetch_json(url):
     """Fetch JSON data from URL with error handling"""
@@ -30,18 +47,15 @@ def fetch_json(url):
 
 def get_recent_trades(symbol, limit=1000):
     """Get recent trades"""
-    url = f"{BASE_URL}/api/v3/trades?symbol={symbol}&limit={limit}"
-    return fetch_json(url)
+    return fetch_with_fallback(f"/api/v3/trades?symbol={symbol}&limit={limit}")
 
 def get_orderbook(symbol, limit=1000):
     """Get orderbook depth"""
-    url = f"{BASE_URL}/api/v3/depth?symbol={symbol}&limit={limit}"
-    return fetch_json(url)
+    return fetch_with_fallback(f"/api/v3/depth?symbol={symbol}&limit={limit}")
 
 def get_ticker(symbol):
     """Get 24h ticker for reference"""
-    url = f"{BASE_URL}/api/v3/ticker/24hr?symbol={symbol}"
-    return fetch_json(url)
+    return fetch_with_fallback(f"/api/v3/ticker/24hr?symbol={symbol}")
 
 def analyze_large_trades(trades, threshold_percentile=90, min_threshold=10000):
     """Identify large trades (whale activity)
@@ -249,6 +263,9 @@ def main():
         
         # Get current price for reference
         ticker = get_ticker(symbol)
+        if 'lastPrice' not in ticker:
+            print(f"错误: 无效交易对或 Binance 不可用: {ticker.get('msg', 'unknown error')}", file=sys.stderr)
+            sys.exit(1)
         current_price = float(ticker['lastPrice'])
         
         if args.trades:

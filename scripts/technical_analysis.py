@@ -12,32 +12,38 @@ from urllib import request, error
 from statistics import mean, stdev
 
 BASE_URL = "https://data-api.binance.vision"
+BINANCE_ENDPOINTS = [
+    "https://data-api.binance.vision",
+    "https://api.binance.us",
+]
+
+def fetch_with_fallback(path):
+    for base in BINANCE_ENDPOINTS:
+        try:
+            url = base + path
+            with request.urlopen(url, timeout=10) as response:
+                return json.loads(response.read().decode())
+        except Exception:
+            continue
+    print(f"所有 Binance 节点均无法访问", file=sys.stderr)
+    sys.exit(1)
 
 def fetch_klines(symbol, interval, limit):
     """Fetch klines from Binance"""
-    url = f"{BASE_URL}/api/v3/klines?symbol={symbol}&interval={interval}&limit={limit}"
-    try:
-        with request.urlopen(url, timeout=10) as response:
-            data = json.loads(response.read().decode())
-            return [
-                {
-                    'open_time': k[0],
-                    'open': float(k[1]),
-                    'high': float(k[2]),
-                    'low': float(k[3]),
-                    'close': float(k[4]),
-                    'volume': float(k[5]),
-                    'close_time': k[6],
-                    'quote_volume': float(k[7])
-                }
-                for k in data
-            ]
-    except error.HTTPError as e:
-        print(f"HTTP Error {e.code}: {e.reason}", file=sys.stderr)
-        sys.exit(1)
-    except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
-        sys.exit(1)
+    data = fetch_with_fallback(f"/api/v3/klines?symbol={symbol}&interval={interval}&limit={limit}")
+    return [
+        {
+            'open_time': k[0],
+            'open': float(k[1]),
+            'high': float(k[2]),
+            'low': float(k[3]),
+            'close': float(k[4]),
+            'volume': float(k[5]),
+            'close_time': k[6],
+            'quote_volume': float(k[7])
+        }
+        for k in data
+    ]
 
 def calculate_sma(prices, period):
     """Calculate Simple Moving Average"""

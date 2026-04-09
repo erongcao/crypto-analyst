@@ -50,35 +50,34 @@ def fetch_json(url):
 
 def get_price(symbol):
     """Get current price for a symbol"""
-    url = f"{BASE_URL}/api/v3/ticker/price?symbol={symbol}"
-    data = fetch_json(url)
+    data = fetch_with_fallback(f"/api/v3/ticker/price?symbol={symbol}")
+    if 'price' not in data:
+        print(f"错误: 无效交易对 {symbol} 或 Binance 不可用", file=sys.stderr)
+        sys.exit(1)
     return data
 
 def get_ticker_24h(symbol):
     """Get 24h ticker statistics"""
-    url = f"{BASE_URL}/api/v3/ticker/24hr?symbol={symbol}"
-    data = fetch_json(url)
+    data = fetch_with_fallback(f"/api/v3/ticker/24hr?symbol={symbol}")
+    if 'lastPrice' not in data:
+        print(f"错误: 无效交易对 {symbol} 或 Binance 不可用", file=sys.stderr)
+        sys.exit(1)
     return data
 
 def get_orderbook(symbol, limit=20):
     """Get orderbook depth"""
-    url = f"{BASE_URL}/api/v3/depth?symbol={symbol}&limit={limit}"
-    data = fetch_json(url)
-    return data
+    return fetch_with_fallback(f"/api/v3/depth?symbol={symbol}&limit={limit}")
 
 def get_recent_trades(symbol, limit=100):
     """Get recent trades"""
-    url = f"{BASE_URL}/api/v3/trades?symbol={symbol}&limit={limit}"
-    data = fetch_json(url)
-    return data
+    return fetch_with_fallback(f"/api/v3/trades?symbol={symbol}&limit={limit}")
 
 def get_klines(symbol, interval, limit=100):
     """Get candlestick data (klines)
     
     Intervals: 1m, 3m, 5m, 15m, 30m, 1h, 2h, 4h, 6h, 8h, 12h, 1d, 3d, 1w, 1M
     """
-    url = f"{BASE_URL}/api/v3/klines?symbol={symbol}&interval={interval}&limit={limit}"
-    data = fetch_json(url)
+    data = fetch_with_fallback(f"/api/v3/klines?symbol={symbol}&interval={interval}&limit={limit}")
     
     # Format klines for readability
     formatted = []

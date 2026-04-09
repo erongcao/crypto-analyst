@@ -11,6 +11,21 @@ from urllib import request, error
 from datetime import datetime
 
 BASE_URL = "https://data-api.binance.vision"
+BINANCE_ENDPOINTS = [
+    "https://data-api.binance.vision",
+    "https://api.binance.us",
+]
+
+def fetch_with_fallback(path):
+    for base in BINANCE_ENDPOINTS:
+        try:
+            url = base + path
+            with request.urlopen(url, timeout=10) as response:
+                return json.loads(response.read().decode())
+        except Exception:
+            continue
+    print(f"所有 Binance 节点均无法访问", file=sys.stderr)
+    sys.exit(1)
 
 def fetch_json(url):
     """Fetch JSON data from URL with error handling"""
@@ -29,13 +44,11 @@ def fetch_json(url):
 
 def get_all_tickers():
     """Get 24h ticker data for all symbols"""
-    url = f"{BASE_URL}/api/v3/ticker/24hr"
-    return fetch_json(url)
+    return fetch_with_fallback("/api/v3/ticker/24hr")
 
 def get_exchange_info():
     """Get exchange information including trading pairs"""
-    url = f"{BASE_URL}/api/v3/exchangeInfo"
-    return fetch_json(url)
+    return fetch_with_fallback("/api/v3/exchangeInfo")
 
 def filter_usdt_pairs(tickers):
     """Filter for USDT trading pairs only"""
