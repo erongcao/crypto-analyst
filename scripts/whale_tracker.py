@@ -43,23 +43,27 @@ def get_ticker(symbol):
     url = f"{BASE_URL}/api/v3/ticker/24hr?symbol={symbol}"
     return fetch_json(url)
 
-def analyze_large_trades(trades, threshold_percentile=90):
+def analyze_large_trades(trades, threshold_percentile=90, min_threshold=10000):
     """Identify large trades (whale activity)
-    
+
     Args:
         trades: List of recent trades
         threshold_percentile: Percentile for defining "large" trades
+        min_threshold: Absolute minimum threshold in USD (default $10,000)
     """
     if not trades:
         return []
-    
+
     # Calculate trade sizes
     trade_sizes = [float(t['qty']) * float(t['price']) for t in trades]
-    
+
     # Find threshold (top percentile)
     sorted_sizes = sorted(trade_sizes)
     threshold_idx = int(len(sorted_sizes) * (threshold_percentile / 100))
     threshold = sorted_sizes[threshold_idx] if threshold_idx < len(sorted_sizes) else sorted_sizes[-1]
+
+    # Enforce absolute minimum threshold to avoid threshold collapse in extreme markets
+    threshold = max(threshold, min_threshold)
     
     # Filter large trades
     large_trades = []

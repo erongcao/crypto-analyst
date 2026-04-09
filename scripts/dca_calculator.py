@@ -2,12 +2,26 @@
 """
 DCA (Dollar Cost Averaging) Calculator
 Plan DCA schedule, amount distribution, and cost averaging projections
+自动从 OKX 获取实时价格，无需手动输入。
 """
 
 import json
 import argparse
 import sys
+import requests
 from datetime import datetime, timedelta
+
+def get_current_price(symbol='BTC-USDT'):
+    """从 OKX 公开接口获取实时价格（不需要 API Key）"""
+    try:
+        url = f"https://www.okx.com/api/v5/market/ticker?instId={symbol}-USDT"
+        r = requests.get(url, timeout=10)
+        data = r.json()
+        if data.get('data'):
+            return float(data['data'][0]['last'])
+    except Exception:
+        pass
+    return None
 
 def calculate_dca_schedule(total_amount, frequency, duration_days, start_date=None):
     """Calculate DCA purchase schedule
@@ -217,12 +231,22 @@ def main():
         start_date = None
         if args.start_date:
             start_date = datetime.strptime(args.start_date, '%Y-%m-%d')
-        
+
         # Calculate schedule
         schedule, num_purchases, amount_per_purchase = calculate_dca_schedule(
             args.total, args.frequency, args.duration, start_date
         )
-        
+
+        # 自动获取当前价格（如果不提供）
+        if not args.current_price:
+            print("正在自动获取 BTC 当前价格...")
+            args.current_price = get_current_price('BTC-USDT')
+            if args.current_price:
+                print(f"获取成功: ${args.current_price:,.2f}\n")
+            else:
+                print("获取失败，请手动设置 --current-price")
+                sys.exit(1)
+
         if args.json:
             output = {
                 'total_amount': args.total,
@@ -230,22 +254,23 @@ def main():
                 'duration_days': args.duration,
                 'num_purchases': num_purchases,
                 'amount_per_purchase': amount_per_purchase,
+                'current_price': args.current_price,
                 'schedule': schedule
             }
             print(json.dumps(output, indent=2))
         else:
             format_schedule_output(schedule, num_purchases, amount_per_purchase, args.total)
-            
+
             # Show scenarios if current price provided
             if args.current_price and args.scenarios:
                 scenarios = {
                     'Flat market': args.current_price,
-                    'Bull market (+30%)': args.current_price * 0.85,  # Lower avg price in bull
-                    'Bear market (-30%)': args.current_price * 1.15,  # Higher avg price in bear
+                    'Bull market (+30%)': args.current_price * 0.85,
+                    'Bear market (-30%)': args.current_price * 1.15,
                     'Volatile (±20%)': args.current_price,
                 }
                 simple_projection(amount_per_purchase, num_purchases, args.current_price, scenarios)
-            
+
             # Summary
             print(f"{'='*70}")
             print(f"Summary")
@@ -253,15 +278,14 @@ def main():
             print(f"This DCA strategy spreads ${args.total:,.2f} over {num_purchases} purchases")
             print(f"Each {args.frequency} purchase: ${amount_per_purchase:,.2f}")
             print(f"Duration: {args.duration} days (~{args.duration/30:.1f} months)")
-            
+
             if args.current_price:
-                # Show what immediate purchase would get
                 immediate_units = args.total / args.current_price
                 print(f"\nImmediate purchase at ${args.current_price:,.2f}: {immediate_units:.6f} units")
                 print(f"DCA benefit: Reduces timing risk and emotional decision-making")
-            
+
             print(f"\n{'='*70}\n")
-            
+
     except ValueError as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)

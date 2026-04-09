@@ -41,9 +41,9 @@ def filter_usdt_pairs(tickers):
     """Filter for USDT trading pairs only"""
     return [t for t in tickers if t['symbol'].endswith('USDT') and t['symbol'] != 'USDT']
 
-def filter_active_pairs(tickers, min_volume=100000):
-    """Filter for pairs with significant volume"""
-    return [t for t in tickers if float(t['quoteVolume']) >= min_volume]
+def filter_active_pairs(tickers, min_volume=1_000_000):
+    """Filter for pairs with significant volume (default: >$1M 24h quote volume)"""
+    return [t for t in tickers if float(t.get('quoteVolume', 0)) >= min_volume]
 
 def find_top_gainers(tickers, limit=10):
     """Find top gaining pairs by 24h percentage change"""

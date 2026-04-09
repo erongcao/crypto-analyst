@@ -12,6 +12,26 @@ from urllib.parse import urlencode
 
 BASE_URL = "https://data-api.binance.vision"
 FAPI_URL = "https://fapi.binance.com"
+# Binance 公开数据节点（国内可访问）
+# 按顺序尝试，失败则自动降级
+BINANCE_ENDPOINTS = [
+    "https://data-api.binance.vision",  # 全球节点
+    "https://api.binance.us",             # Binance US 节点
+]
+
+def fetch_with_fallback(path, base_urls=None):
+    """Try multiple endpoints until one works"""
+    if base_urls is None:
+        base_urls = BINANCE_ENDPOINTS
+    for base in base_urls:
+        url = base + path
+        try:
+            with request.urlopen(url, timeout=10) as response:
+                return json.loads(response.read().decode())
+        except Exception:
+            continue
+    print(f"所有 Binance 节点均无法访问: {path}", file=sys.stderr)
+    sys.exit(1)
 
 def fetch_json(url):
     """Fetch JSON data from URL with error handling"""
