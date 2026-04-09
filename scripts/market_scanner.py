@@ -163,7 +163,7 @@ def format_breakout_table(tickers, title):
     
     print()
 
-def scan_market(min_volume=100000, limit=10):
+def scan_market(min_volume=1_000_000, limit=10):
     """Perform comprehensive market scan"""
     print(f"Scanning Binance market... (minimum volume: ${min_volume:,.0f})")
     
@@ -195,8 +195,8 @@ def scan_market(min_volume=100000, limit=10):
 
 def main():
     parser = argparse.ArgumentParser(description='Binance Market Scanner')
-    parser.add_argument('--min-volume', '-v', type=float, default=100000,
-                       help='Minimum 24h volume in USDT (default: 100000)')
+    parser.add_argument('--min-volume', '-v', type=float, default=1_000_000,
+                       help='Minimum 24h volume in USDT (default: 1000000)')
     parser.add_argument('--limit', '-l', type=int, default=10,
                        help='Number of results per category (default: 10)')
     parser.add_argument('--gainers', '-g', action='store_true', help='Show only top gainers')
